@@ -1,0 +1,57 @@
+version: '3.4'
+
+services:
+  agentchat.api:
+    image: ${DOCKER_REGISTRY-}agentchatapi
+    build:
+      context: .
+      dockerfile: AgentChat.Api/Dockerfile
+    container_name: chatAgent_backend_api
+    restart: unless-stopped
+    ports:
+      - "5300:8080"
+      - "5301:8081"
+    depends_on:
+      - database
+      - agentchat.redis
+    environment:
+     - DB_HOST=database
+     - DB_SA_PASSWORD="Password1"
+     - DB_NAME=ChatAgentDB
+    networks:
+      - agentChat-network
+
+  agentchat.redis:
+    image: redis:latest
+    restart: always
+    container_name: agentchat_redis
+    ports:
+      - '6379:6379'
+    networks:
+      - agentChat-network
+
+  database:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+        - ACCEPT_EULA="Y"
+        - MSSQL_SA_PASSWORD=Password1
+        - MSSQL_AGENT_ENABLED=1
+        -  MSSQL_DATA_DIR=/var/opt/mssql/data
+        - MSSQL_PID=Express
+        - MSSQL_TCP_PORT=1433 
+    platform: linux/amd64
+    ports:
+        - 1433:1433
+    restart: unless-stopped
+    container_name: ChatAgentDatabase
+    networks:
+        - agentChat-network
+    volumes:
+        - ./data:/var/opt/mssql/data
+        - ./log:/var/opt/mssql/log
+        - ./secrets:/var/opt/mssql/secrets
+
+
+networks:
+  agentChat-network:
+    driver: bridge
